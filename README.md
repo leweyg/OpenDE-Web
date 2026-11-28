@@ -1,3 +1,49 @@
+# Full-game browser streaming
+
+The `full_game` branch loads loose Deus Ex GOTY packages on demand from
+`https://storage.googleapis.com/demos_opende/full_game/deus_ex_data/`.
+Start at `static/explore.html`, or use the main menu to play normally. Maps and
+their dependencies download when first opened, including during level travel.
+There is no monolithic `.data` download. Shared engine/game packages are still
+required at startup, so a first visit can download substantially more than one map.
+
+The checked-in `static/full-game-assets.json` contains file names, sizes and SHA-256
+hashes from the English GOG 1.112fm installer, not the game files themselves.
+Small INI/localization files load before startup; package files load when C++ opens
+them. Asyncify suspends execution during fetches. Validated files are stored in
+Cache Storage when available; settings and saves continue to use IDBFS. Package
+bytes are released from the virtual filesystem once C++ owns its copy. Browser
+cache eviction simply causes a later re-download. A failed download displays the
+file name and stops loading rather than using a partial file; reload to retry.
+
+Build with the configured VM (no game-data upload is needed):
+
+```sh
+./build_web.sh --project YOUR_PROJECT --vm opende-build --stream-assets --output build-web-stream
+python3 -m http.server 7336 --bind 127.0.0.1 --directory static
+```
+
+Or configure Emscripten locally with `-DDX_WEB_STREAM_ASSETS=ON`. The output folder
+contains `index.html`, `index.js`, `index.wasm`, and `full-game-assets.json`.
+Serve over HTTPS or localhost so checksum verification and browser caching work.
+The asset host must allow cross-origin GET requests. Both the generated shell and
+the static page use the same loader. `Module.assetBaseURL` (with a trailing slash)
+and `Module.assetManifestURL` may override the defaults before the loader runs.
+`?map=02_NYC_Street` can start any map listed in the manifest; the existing
+`?level=training` and other shortcuts still work.
+
+If the hosted files change, regenerate the manifest from the matching files and rebuild:
+
+```sh
+python3 scripts/make-web-asset-manifest.py /path/to/deus_ex_data static/full-game-assets.json
+node --test tests/web/*.test.cjs static/tests/*.test.cjs
+```
+
+Omitting `--stream-assets` retains the older bundled-data build workflow below.
+The static page on this branch is intended for the streaming build.
+
+---
+
 # OpenDE
 
 An open-source reimplementation of the Deus Ex engine and UnrealEd. It runs

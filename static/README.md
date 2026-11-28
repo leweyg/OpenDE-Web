@@ -1,3 +1,11 @@
+# Full-game assets
+
+This branch uses individually downloaded GOTY files instead of the demo `.data`
+package. See [the build and hosting instructions](../README.md#full-game-browser-streaming).
+The asset index contains names, sizes and hashes only. `data-source.js` and its
+preload-cache tests are retained for the older bundled-data workflow but are not
+loaded by this branch's player page.
+
 # Changes made in this branch
 
 This browser demo branch adds touchscreen, touchpad, and keyboard controls, a level picker, a local WebAssembly build workflow, and WebGL rendering changes. The [code patch](branch.patch) captures the source changes from upstream `663bcb4264742742c259164fed8ffa84b0f258b2` (`origin/master`, tag `1.0.5`) through `8b97680d3681b48acc01619d1910e1ac5742aa69`.

@@ -5,6 +5,17 @@
 #include <fstream>
 #include <stdexcept>
 
+#ifdef DX_WEB_STREAM_ASSETS
+#include <emscripten.h>
+
+EM_ASYNC_JS(int, ensureWebAsset, (const char* path), {
+    return await Module["ensureAsset"](UTF8ToString(path));
+});
+EM_JS(void, releaseWebAsset, (const char* path), {
+    Module["releaseAsset"](UTF8ToString(path));
+});
+#endif
+
 namespace dx {
     bool iequals(std::string_view a, std::string_view b)
     {
@@ -122,6 +133,11 @@ namespace dx {
     Package::Package(const std::filesystem::path& path)
         : packageName(path.stem().string())
     {
+#ifdef DX_WEB_STREAM_ASSETS
+        if (!ensureWebAsset(path.string().c_str())) {
+            throw std::runtime_error("cannot download package " + path.string());
+        }
+#endif
         std::ifstream file(path, std::ios::binary);
         if (!file) {
             throw std::runtime_error("cannot open package " + path.string());
@@ -132,6 +148,10 @@ namespace dx {
             throw std::runtime_error("cannot read package " + path.string());
         }
 
+#ifdef DX_WEB_STREAM_ASSETS
+        file.close();
+        releaseWebAsset(path.string().c_str());
+#endif
         Reader reader(bytes, 0);
         if (reader.u32() != 0x9E2A83C1) {
             throw std::runtime_error("not an unreal package: " + path.string());

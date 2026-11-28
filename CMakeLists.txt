@@ -33,6 +33,8 @@ option(SKIP_QA "Skip clang-tidy and clang-format for faster builds" OFF)
 option(SKIP_UT "Skip unit tests faster builds" OFF)
 set(DEUSEX_GAME_DATA "${CMAKE_SOURCE_DIR}/game-data" CACHE PATH "Path to the original Deus Ex game data")
 
+option(DX_WEB_STREAM_ASSETS "Download loose browser assets on demand" OFF)
+
 # Dependencies
 set(BUILD_SHARED_LIBS OFF)
 
@@ -43,8 +45,14 @@ set(SDL_TEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/SDL2-2.32.10 SYSTEM)
 
 if(EMSCRIPTEN)
-    add_compile_options(-fwasm-exceptions)
-    add_link_options(-fwasm-exceptions)
+    if(DX_WEB_STREAM_ASSETS)
+        # Asyncify cannot safely unwind through native Wasm exception handlers.
+        add_compile_options(-fexceptions)
+        add_link_options(-fexceptions -sDISABLE_EXCEPTION_CATCHING=0)
+    else()
+        add_compile_options(-fwasm-exceptions)
+        add_link_options(-fwasm-exceptions)
+    endif()
 endif()
 
 # glad

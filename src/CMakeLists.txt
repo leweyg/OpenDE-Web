@@ -71,15 +71,28 @@ if(EMSCRIPTEN)
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
     -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=256MB -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=16MB
     -sEXPORTED_RUNTIME_METHODS=FS -lidbfs.js
-    -sLZ4=1 --use-preload-cache
     --shell-file ${DX_WEB_SHELL}
-    "SHELL:--preload-file ${DEUSEX_GAME_DATA}/System@/game/System"
-    ${DX_WEB_EXCLUDE}
-    "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Maps@/game/Maps"
-    "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Music@/game/Music"
-    "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Sounds@/game/Sounds"
-    "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Textures@/game/Textures"
   )
+  if(DX_WEB_STREAM_ASSETS)
+    target_compile_definitions(dx-engine PRIVATE DX_WEB_STREAM_ASSETS)
+    target_compile_definitions(deusex PRIVATE DX_WEB_STREAM_ASSETS)
+    target_link_options(deusex PRIVATE -sASYNCIFY=1 -sASYNCIFY_STACK_SIZE=1048576
+      "SHELL:--pre-js ${CMAKE_SOURCE_DIR}/cmake/emscripten/asset-loader.js")
+    set_property(TARGET deusex APPEND PROPERTY LINK_DEPENDS
+      ${CMAKE_SOURCE_DIR}/cmake/emscripten/asset-loader.js)
+    configure_file(${CMAKE_SOURCE_DIR}/static/full-game-assets.json
+      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/full-game-assets.json COPYONLY)
+  else()
+    target_link_options(deusex PRIVATE
+      -sLZ4=1 --use-preload-cache
+      "SHELL:--preload-file ${DEUSEX_GAME_DATA}/System@/game/System"
+      ${DX_WEB_EXCLUDE}
+      "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Maps@/game/Maps"
+      "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Music@/game/Music"
+      "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Sounds@/game/Sounds"
+      "SHELL:--preload-file ${DEUSEX_GAME_DATA}/Textures@/game/Textures"
+    )
+  endif()
 else()
   target_compile_definitions(deusex PRIVATE DEUSEX_GAME_DATA="${DEUSEX_GAME_DATA}")
 endif()

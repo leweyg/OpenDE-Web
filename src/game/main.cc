@@ -46,6 +46,17 @@
 #include <utility>
 #include <vector>
 
+#ifdef DX_WEB_STREAM_ASSETS
+EM_JS(void, notifyWebGameReady, (), {
+    Module["notifyGameReady"]();
+});
+EM_JS(double, consumeAssetWaitSeconds, (), {
+    const seconds = Module["assetWaitSeconds"] || 0;
+    Module["assetWaitSeconds"] = 0;
+    return seconds;
+});
+#endif
+
 namespace {
 #ifdef __EMSCRIPTEN__
     constexpr bool browser = true;
@@ -1429,6 +1440,9 @@ namespace {
                 dx::console::execute(world ? world->player() : nullptr, command);
             }
             last = SDL_GetPerformanceCounter();
+#ifdef DX_WEB_STREAM_ASSETS
+            consumeAssetWaitSeconds(); // Startup downloads preceded the simulation clock.
+#endif
         }
 
         int run()
@@ -1464,6 +1478,10 @@ namespace {
             uint64_t now = SDL_GetPerformanceCounter();
             float delta = static_cast<float>(now - last) / static_cast<float>(SDL_GetPerformanceFrequency());
             last = now;
+#ifdef DX_WEB_STREAM_ASSETS
+            // Download waits must not advance game timers or physics on the next frame.
+            delta = std::max(0.0f, delta - static_cast<float>(consumeAssetWaitSeconds()));
+#endif
             if (options.frames >= 0) {
                 delta = 1.0f / 30.0f;
             }
@@ -1721,6 +1739,9 @@ int main(int argc, char** argv)
             return 1;
         }
         game->begin();
+#ifdef DX_WEB_STREAM_ASSETS
+        notifyWebGameReady();
+#endif
         emscripten_set_click_callback("#fullscreen", nullptr, true, [](int, const EmscriptenMouseEvent*, void*) -> EM_BOOL {
             dx::console::toggleFullscreenHook();
             return true;

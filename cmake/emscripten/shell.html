@@ -248,6 +248,7 @@
                         progressElement.value = parseInt(match[1], 10) / parseInt(match[2], 10);
                         messageElement.textContent = "Loading game data " + Math.round(100 * progressElement.value) + "%";
                     } else if (text) {
+                        statusElement.style.display = "block";
                         messageElement.textContent = text;
                     } else {
                         statusElement.style.display = "none";

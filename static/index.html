@@ -4,9 +4,8 @@
     <head>
         <meta charset=utf-8>
         <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name=viewport>
-        <title>OpenDE Demo</title>
+        <title>OpenDE — Full Game</title>
         <link rel=preconnect href="https://storage.googleapis.com" crossorigin>
-        <script src="data-source.js"></script>
         <style>
             :root {
                 --background: #1a1a1a;
@@ -207,11 +206,11 @@
                 <p>An open-source reimplementation of the Deus Ex engine</p>
                 <h2>About</h2>
                 <p>OpenDE runs UnrealScript bytecode from the shipped packages. This page is the same engine compiled to
-                    WebAssembly with Emscripten, using WebGL 2. It runs the shareware Deus Ex demo</p>
+                    WebAssembly with Emscripten, using WebGL 2. It runs Deus Ex GOTY, downloading game files as they are needed. Verified files are cached for later visits.</p>
                 <p>Report any issues on the repo: <a
                         href=https://github.com/jarmitage99/OpenDE>github.com/jarmitage99/OpenDE</a></p>
                 <h2>Controls</h2>
-                <p>WASD to move, LMB to fire, RMB to use. ESC opens the main menu. Checked Web Controls enables web controls; uncheck it for the original demo bindings.</p>
+                <p>WASD to move, LMB to fire, RMB to use. ESC opens the main menu. Checked Web Controls enables web controls; uncheck it for the original game bindings.</p>
                 <p>Classic: [ to zoom, ; to reload, I for inventory, X to hold crouch, F or End to recenter, Backspace to equip/unequip, Tab to drop, and the mouse wheel to cycle items. C/Z turn and R/V look up/down.</p>
                 <p>In Web mode, scroll up to walk backward; scroll down to walk forward. Keep scrolling to keep moving.</p>
                 <p>Scroll left to turn right; scroll right to turn left. Turning is slower. Scroll diagonally to move and turn at the same time.</p>
@@ -220,15 +219,11 @@
                 <p>Settings and saved games are kept in browser storage.</p>
             </section>
         </main>
-        <script>var statusElement = document.getElementById("status"), messageElement = document.getElementById("message"), progressElement = document.getElementById("progress"), fullscreenButton = document.getElementById("fullscreen"), userRoot = "/home/web_user/.local/share"; function persist() { FS.syncfs(!1, function (e) { e && console.error("save sync failed", e) }) } var Module = { canvas: document.getElementById("canvas"), arguments: ["--width", "800", "--height", "600"], preRun: [function () { FS.mkdirTree(userRoot), FS.mount(IDBFS, {}, userRoot), addRunDependency("idbfs"), FS.syncfs(!0, function (e) { e && console.error("load sync failed", e), removeRunDependency("idbfs") }) }], postRun: [function () { fullscreenButton.disabled = !1 }], setStatus: function (e) { var t = e.match(/\((\d+(?:\.\d+)?)\/(\d+)\)/); t ? (progressElement.value = parseInt(t[1], 10) / parseInt(t[2], 10), messageElement.textContent = "Downloading game data " + Math.round(100 * progressElement.value) + "%") : e ? messageElement.textContent = e : statusElement.style.display = "none" }, onAbort: function (e) { statusElement.style.display = "block", messageElement.textContent = "Error: " + e } }; Module.canvas.addEventListener("click", function () { Module.canvas.focus() })</script>
+        <script>var statusElement = document.getElementById("status"), messageElement = document.getElementById("message"), progressElement = document.getElementById("progress"), fullscreenButton = document.getElementById("fullscreen"), userRoot = "/home/web_user/.local/share"; function persist() { FS.syncfs(!1, function (e) { e && console.error("save sync failed", e) }) } var Module = { canvas: document.getElementById("canvas"), arguments: ["--width", "800", "--height", "600"], preRun: [function () { FS.mkdirTree(userRoot), FS.mount(IDBFS, {}, userRoot), addRunDependency("idbfs"), FS.syncfs(!0, function (e) { e && console.error("load sync failed", e), removeRunDependency("idbfs") }) }], postRun: [function () { fullscreenButton.disabled = !1 }], setStatus: function (e) { var t = e.match(/\((\d+(?:\.\d+)?)\/(\d+)\)/); t ? (progressElement.value = parseInt(t[1], 10) / parseInt(t[2], 10), messageElement.textContent = "Downloading game data " + Math.round(100 * progressElement.value) + "%") : e ? (statusElement.style.display = "block", messageElement.textContent = e) : statusElement.style.display = "none" }, onAbort: function (e) { statusElement.style.display = "block", messageElement.textContent = "Error: " + e } }; Module.canvas.addEventListener("click", function () { Module.canvas.focus() })</script>
         <script>
             // The generated Emscripten loader uses index.* in the standalone build.
             Module.locateFile = (name, prefix) => {
                 if (name === "index.wasm") return prefix + "deusex.wasm";
-                if (name === "index.data" || name === "deusex.data") {
-                    OpenDEDataSource.loaderStarted = true;
-                    return OpenDEDataSource.url;
-                }
                 return prefix + name;
             };
             var startLevel = new URLSearchParams(window.location.search).get("level");

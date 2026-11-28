@@ -28,8 +28,11 @@ parser.add_argument("--delete-vm", action="store_true", help="Delete the named O
 parser.add_argument("--output", default="build-web-local", help="Local bundle output directory")
 parser.add_argument("--game-data", help="Local game data directory to upload (defaults to demo-data or game-data)")
 parser.add_argument("--remote-game-data", help="Absolute game data directory already on the build VM")
+parser.add_argument("--stream-assets", action="store_true", help="Build on-demand loose-asset loading instead of a preload package")
 parser.add_argument("--jobs", type=int, default=16, help="Parallel compiler jobs")
 args = parser.parse_args(sys.argv[2:])
+if args.stream_assets and (args.game_data or args.remote_game_data):
+    parser.error("--stream-assets uses static/full-game-assets.json; regenerate that index separately from local game data")
 if args.jobs < 1:
     parser.error("--jobs must be positive")
 if args.remote_game_data and (args.game_data or not args.remote_game_data.startswith("/")):
@@ -66,7 +69,8 @@ if args.delete_vm:
 output = Path(args.output).expanduser()
 if not output.is_absolute():
     output = root / output
-bundle_files = {"index.html", "index.js", "index.wasm", "index.data", "SHA256SUMS"}
+bundle_files = {"index.html", "index.js", "index.wasm", "SHA256SUMS"}
+bundle_files.add("full-game-assets.json" if args.stream_assets else "index.data")
 if not args.prepare_only and output.exists():
     if output.is_symlink() or not output.is_dir() or any(
         item.is_symlink() or item.name not in bundle_files for item in output.iterdir()
@@ -74,8 +78,10 @@ if not args.prepare_only and output.exists():
         parser.error(f"Output contains other files: {output}. Choose a dedicated --output directory.")
 data = Path(args.game_data).expanduser().resolve() if args.game_data else next(
     (root / name for name in ("demo-data", "game-data") if (root / name).is_dir()), None)
-packed_data = data is None and all((root / "static" / name).is_file() for name in ("deusex.js", "deusex.data"))
-if not args.prepare_only and not args.remote_game_data and not packed_data and (data is None or not all((data / name).is_dir() for name in ("System", "Maps", "Textures", "Sounds", "Music"))):
+if args.stream_assets:
+    data = None
+packed_data = not args.stream_assets and data is None and all((root / "static" / name).is_file() for name in ("deusex.js", "deusex.data"))
+if not args.stream_assets and not args.prepare_only and not args.remote_game_data and not packed_data and (data is None or not all((data / name).is_dir() for name in ("System", "Maps", "Textures", "Sounds", "Music"))):
     parser.error("Provide --game-data with System, Maps, Textures, Sounds and Music, or provide static/deusex.js and static/deusex.data, or use --prepare-only")
 
 if args.create:
@@ -155,16 +161,18 @@ print(f"Delete this temporary VM when finished: {cleanup}", flush=True)
 if args.prepare_only:
     print("Source uploaded and Emscripten 6.0.12 ready. VM retained for later builds.")
     sys.exit(0)
+stream_option = "ON" if args.stream_assets else "OFF"
+checksum_files = shlex.join(sorted(bundle_files - {"SHA256SUMS"}))
 data = shlex.quote(work + "/game-data")
 build = shlex.quote(work + "/build")
 source = shlex.quote(work + "/source")
 guest(sdk_setup + f"""
 emcmake cmake -S {source} -B {build} -G Ninja \\
     -DCMAKE_BUILD_TYPE=Release -DSKIP_QA=ON -DSKIP_UT=ON \\
-    -DDEUSEX_GAME_DATA={data}
+    -DDEUSEX_GAME_DATA={data} -DDX_WEB_STREAM_ASSETS={stream_option}
 cmake --build {build} --target deusex --parallel {args.jobs}
 cd {build}/bin
-sha256sum index.html index.js index.wasm index.data > SHA256SUMS
+sha256sum {checksum_files} > SHA256SUMS
 """)
 print("Copying the browser bundle back...", flush=True)
 output.mkdir(parents=True, exist_ok=True)
